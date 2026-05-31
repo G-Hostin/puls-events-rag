@@ -21,3 +21,6 @@ data/*.pkl
 
 # Donnees OpenAgenda
 data/events.jsonl
+
+# Index FAISS 
+data/index/
