@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
@@ -22,6 +23,7 @@ from src.vectorstore.event_to_document import event_to_document
 from src.vectorstore.indexing import build_index
 
 load_dotenv()
+logger = logging.getLogger("uvicorn.error")
 
 REGION = "Nouvelle-Aquitaine"
 DAYS_HISTORY = 365
@@ -31,7 +33,16 @@ INDEX_DIR = Path("data/index")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.chain, app.state.retriever = build_chain()
+    if INDEX_DIR.exists() and any(INDEX_DIR.iterdir()):
+        try:
+            app.state.chain, app.state.retriever = build_chain()
+            logger.info("Chaine RAG chargee avec succes")
+        except Exception as e:
+            logger.warning(f"Index present mais chargement echoue : {e}")
+            app.state.chain, app.state.retriever = None, None
+    else:
+        logger.warning("Index FAISS absent : appelez POST /rebuild pour initialiser")
+        app.state.chain, app.state.retriever = None, None
     yield
 
 
@@ -58,6 +69,12 @@ def health():
 @app.post("/ask", response_model=AskResponse)
 def ask(request: AskRequest):
     """Pose une question au systeme RAG et retourne une reponse augmentee"""
+    if app.state.chain is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Index FAISS non initialise. Appelez POST /rebuild d'abord",
+        )
+
     question = request.question.strip()
     if not question:
         raise HTTPException(status_code=422, detail="La question ne peut pas etre vide")
@@ -105,7 +122,6 @@ def rebuild():
     chunks = chunk_documents(documents)
     build_index(chunks, INDEX_DIR)
 
-    # Recharger la chaine en memoire avec le nouvel index
     app.state.chain, app.state.retriever = build_chain()
 
     return {
