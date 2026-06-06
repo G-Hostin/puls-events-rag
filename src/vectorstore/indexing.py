@@ -16,9 +16,9 @@ BATCH_SIZE = 32  # nombre de textes envoyes par requete Mistral
 def _get_embeddings() -> MistralAIEmbeddings:
     """Instancie le modele d'embeddings Mistral"""
     api_key = os.getenv("MISTRAL_API_KEY")
-    if not api_key or api_key == "ta_cle_ici":
+    if not api_key:
         raise RuntimeError(
-            "MISTRAL_API_KEY manquante ou non configuree dans .env"
+            "MISTRAL_API_KEY manquante .env"
         )
     return MistralAIEmbeddings(model=EMBED_MODEL, api_key=api_key)
 

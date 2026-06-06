@@ -30,9 +30,9 @@ def main():
             f.write(json.dumps(event, ensure_ascii=False) + "\n")
 
     print(f"\n=== Recapitulatif ===")
-    print(f"  Bruts        : {len(raw_events)}")
-    print(f"  Apres process: {len(events)}")
-    print(f"  Sauvegarde   : {OUTPUT_PATH}")
+    print(f"Bruts        : {len(raw_events)}")
+    print(f"Apres process: {len(events)}")
+    print(f"Sauvegarde   : {OUTPUT_PATH}")
 
     statuses = Counter(e.get("status_label") for e in events)
     print(f"\n  Distribution par etat :")

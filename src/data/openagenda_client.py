@@ -45,7 +45,7 @@ def fetch_events(region: str, date_min: str, max_events: int = 2000) -> list[dic
             "where": where_clause,
             "order_by": "firstdate_begin DESC",  # plus recents en premier
         }
-        print(f"  Recuperation offset={offset}...")
+        print(f"Recuperation offset={offset}...")
         data = _fetch_page(params)
         results = data.get("results", [])
         if not results:

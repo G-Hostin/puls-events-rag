@@ -42,10 +42,10 @@ def main():
     build_index(chunks, OUTPUT_DIR)
 
     print("\n=== Termine ===")
-    print(f"  Evenements : {len(events)}")
-    print(f"  Documents  : {len(documents)}")
-    print(f"  Chunks     : {len(chunks)}")
-    print(f"  Index      : {OUTPUT_DIR}")
+    print(f"Evenements : {len(events)}")
+    print(f"Documents  : {len(documents)}")
+    print(f"Chunks     : {len(chunks)}")
+    print(f"Index      : {OUTPUT_DIR}")
 
 
 if __name__ == "__main__":
