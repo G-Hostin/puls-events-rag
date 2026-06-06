@@ -24,3 +24,6 @@ data/events.jsonl
 
 # Index FAISS 
 data/index/
+
+# Resultats d'evaluation
+data/eval/results.json

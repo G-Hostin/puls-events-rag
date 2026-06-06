@@ -1,12 +1,12 @@
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 
-from src.rag.retriever import get_retriever
+from src.rag.retriever import TOP_K, get_retriever
 from src.rag.prompt import prompt, format_documents
 from src.rag.generator import get_llm
 
 
-def build_chain(k: int = 5):
+def build_chain(k: int = TOP_K):
     retriever = get_retriever(k=k)
     llm = get_llm()
 
@@ -22,7 +22,7 @@ def build_chain(k: int = 5):
     return chain, retriever
 
 
-def answer(question: str, k: int = 5) -> dict:
+def answer(question: str, k: int = TOP_K) -> dict:
     chain, retriever = build_chain(k=k)
     sources = retriever.invoke(question)
     response = chain.invoke(question)
