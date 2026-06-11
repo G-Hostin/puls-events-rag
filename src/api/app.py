@@ -18,6 +18,7 @@ from src.api.schemas import (
 from src.data.openagenda_client import fetch_events
 from src.data.preprocessing import process
 from src.rag.chain import build_chain
+from src.rag.prompt import format_documents
 from src.vectorstore.chunking import chunk_documents
 from src.vectorstore.event_to_document import event_to_document
 from src.vectorstore.indexing import build_index
@@ -81,7 +82,10 @@ def ask(request: AskRequest):
 
     try:
         sources = app.state.retriever.invoke(question)
-        answer_text = app.state.chain.invoke(question)
+        answer_text = app.state.chain.invoke({
+            "context": format_documents(sources),
+            "question": question,
+        })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur lors de la generation : {e}")
 

@@ -10,7 +10,6 @@ from langchain_mistralai import MistralAIEmbeddings
 load_dotenv()
 
 EMBED_MODEL = os.getenv("MISTRAL_EMBED_MODEL", "mistral-embed")
-BATCH_SIZE = 32  # nombre de textes envoyes par requete Mistral
 
 
 def _get_embeddings() -> MistralAIEmbeddings:

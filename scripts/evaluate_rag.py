@@ -25,6 +25,7 @@ from ragas.llms import LangchainLLMWrapper
 from ragas.metrics import answer_relevancy, context_precision, faithfulness
 
 from src.rag.chain import build_chain
+from src.rag.prompt import format_documents
 
 load_dotenv()
 
@@ -40,12 +41,15 @@ def load_questions():
     return questions
 
 
-def run_rag(questions, chain, retriever):
+def run_rag(questions, generation, retriever):
     rows = []
     for q in questions:
         print(f"  [{q['id']}/10] {q['question']}")
         sources = retriever.invoke(q["question"])
-        answer = chain.invoke(q["question"])
+        answer = generation.invoke({
+            "context": format_documents(sources),
+            "question": q["question"],
+        })
         rows.append({
             "question": q["question"],
             "answer": answer,
@@ -70,10 +74,10 @@ def main():
     print(f"  {len(questions)} questions chargees")
 
     print("\nConstruction de la chaine RAG...")
-    chain, retriever = build_chain()
+    generation, retriever = build_chain()
 
     print("\nGeneration des reponses...")
-    rows = run_rag(questions, chain, retriever)
+    rows = run_rag(questions, generation, retriever)
 
     dataset = Dataset.from_list(rows)
 
