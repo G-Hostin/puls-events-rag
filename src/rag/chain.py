@@ -4,12 +4,15 @@ from src.rag.retriever import TOP_K, get_retriever
 from src.rag.prompt import prompt, format_documents
 from src.rag.generator import get_llm
 
+from datetime import date
+
 
 def build_chain(k: int = TOP_K):
 
     retriever = get_retriever(k=k)
     llm = get_llm()
-    generation = prompt | llm | StrOutputParser()
+    dated_prompt = prompt.partial(today=date.today().strftime("%d/%m/%Y"))
+    generation = dated_prompt | llm | StrOutputParser()
     return generation, retriever
 
 

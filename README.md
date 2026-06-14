@@ -90,7 +90,7 @@ curl -X POST http://localhost:8000/rebuild -H "X-API-Key: testcleapi"
 ```
 
 Ou via Swagger : `POST /rebuild`, bouton "Try it out", renseigner le header
-`x-api-key`, exécuter. Comptez 3-5 minutes (fetch + indexation de ~2000 événements).
+`x-api-key`, exécuter. Comptez quelques minutes (fetch + indexation de ~7000 événements).
 
 > Sous Windows (PowerShell), `curl` se comporte différemment : le plus simple
 > est de passer par Swagger (`/docs`) pour appeler `/rebuild` et `/ask`.
@@ -159,8 +159,9 @@ Résultats obtenus (sur les 10 questions annotées) :
 
 | Métrique          | Score |
 | ----------------- | ----- |
-| Faithfulness      | 0.611 |
+| Faithfulness      | 0.830 |
 | Answer relevancy  | 0.830 |
-| Context precision | 0.702 |
+| Context precision | 0.820 |
 
+Évaluation sur 10 000 événements récupérés, dédupliqués à ~7 000 (index de ~10 500 chunks).
 Le détail par question est sauvegardé dans `data/eval/results.json`.

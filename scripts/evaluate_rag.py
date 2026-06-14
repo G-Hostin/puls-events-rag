@@ -53,7 +53,7 @@ def run_rag(questions, generation, retriever):
         rows.append({
             "question": q["question"],
             "answer": answer,
-            "contexts": [doc.page_content for doc in sources],
+            "contexts": [format_documents([doc]) for doc in sources],
             "ground_truth": q["reference_answer"],
         })
     return rows

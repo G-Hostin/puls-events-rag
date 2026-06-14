@@ -22,14 +22,14 @@ def _fetch_page(params: dict) -> dict:
             time.sleep(RETRY_DELAY)
 
 
-def fetch_events(region: str, date_min: str, max_events: int = 2000) -> list[dict]:
+def fetch_events(region: str, date_min: str, max_events: int = 10000) -> list[dict]:
     """
     Recupere les evenements les plus recents d'une region depuis une date minimale.
 
     Args:
         region: nom de la region (ex. "Nouvelle-Aquitaine")
         date_min: date au format ISO (ex. "2025-05-27")
-        max_events: nombre maximum d'evenements a recuperer (defaut: 2000).
+        max_events: nombre maximum d'evenements a recuperer.
 
     Returns:
         Liste des evenements bruts (dicts), tries par date decroissante.

@@ -71,13 +71,13 @@ def is_valid(event: dict) -> bool:
 
 
 def deduplicate(events: list[dict]) -> list[dict]:
-    """Supprime les doublons avec le uid"""
+    """Supprime les doublons (meme titre et meme ville)"""
     seen = set()
     unique = []
     for event in events:
-        uid = event.get("uid")
-        if uid and uid not in seen:
-            seen.add(uid)
+        key = (event.get("title_fr"), event.get("location_city"))
+        if key not in seen:
+            seen.add(key)
             unique.append(event)
     return unique
 

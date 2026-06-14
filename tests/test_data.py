@@ -111,14 +111,14 @@ def test_is_valid_missing_date():
 
 def test_deduplicate_removes_duplicates():
     events = [
-        {"uid": "1", "title_fr": "A"},
-        {"uid": "2", "title_fr": "B"},
-        {"uid": "1", "title_fr": "A bis"},
+        {"title_fr": "A", "location_city": "Bordeaux"},
+        {"title_fr": "B", "location_city": "Bordeaux"},
+        {"title_fr": "A", "location_city": "Bordeaux"},  # meme titre + meme ville
     ]
     result = deduplicate(events)
     assert len(result) == 2
-    assert result[0]["uid"] == "1"
-    assert result[1]["uid"] == "2"
+    assert result[0]["title_fr"] == "A"
+    assert result[1]["title_fr"] == "B"
 
 
 # --- Test bout en bout ---
