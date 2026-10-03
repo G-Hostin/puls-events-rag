@@ -1,167 +1,147 @@
-# Puls-Events RAG
+# Assistant IA de recommandation d'événements (RAG)
 
-POC d'assistant intelligent de recommandation d'événements culturels pour Puls-Events.
-Système RAG (Retrieval-Augmented Generation) combinant LangChain, Mistral AI et FAISS,
-basé sur les données Open Agenda (région Nouvelle-Aquitaine).
+Assistant conversationnel qui répond en langage naturel à partir de **données réelles** :
+environ 7 000 événements culturels de Nouvelle-Aquitaine issus de l'open data OpenAgenda.
+Le modèle ne répond qu'à partir des événements retrouvés, **cite ses sources** et dit clairement
+quand rien ne correspond, au lieu d'inventer.
+
+> **Question** : « Quels concerts de jazz à Bordeaux ? »
+>
+> **Réponse** : « Il y a Les Vendredis chez Calixte le 19 juin 2026, Petit concert de Jazz, Quatuor Trombones Jazz à Bordeaux », avec la liste des événements sources (titre, ville, lien).
+
+Le même principe s'applique à n'importe quelle base de connaissances : documentation interne,
+catalogue produits, FAQ, contrats, tickets de support.
+
+## Fonctionnalités
+
+- **Ingestion des données** : récupération via l'API OpenAgenda (Opendatasoft), nettoyage, validation et dédoublonnage.
+- **Indexation vectorielle** : découpage en passages, embeddings `mistral-embed`, index FAISS persisté sur disque.
+- **Génération augmentée** : recherche des 5 passages les plus proches, puis réponse rédigée par `mistral-small` à partir de ces seuls passages.
+- **API REST** : FastAPI avec documentation Swagger, gestion d'erreurs explicite et endpoint de reconstruction protégé par clé.
+- **Évaluation automatique** : jeu de questions annotées à la main et métriques Ragas.
+- **Déploiement** : image Docker et Docker Compose, dépendances verrouillées avec uv.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Indexation["Indexation (POST /rebuild)"]
+        A[API OpenAgenda] --> B[Nettoyage et dédoublonnage] --> C[Découpage en passages] --> D[Embeddings Mistral] --> E[(Index FAISS)]
+    end
+    subgraph Question["Question (POST /ask)"]
+        U[Utilisateur] --> F[API FastAPI] --> G[Recherche des 5 passages] --> H[LLM Mistral] --> R[Réponse et sources]
+    end
+    E -.-> G
+```
+
+## Résultats
+
+| Étape | Volume |
+| ----- | ------ |
+| Événements récupérés | 10 000 |
+| Après nettoyage et dédoublonnage | 7 063 |
+| Passages indexés | 10 551 |
+
+Évaluation Ragas sur 10 questions annotées à la main (juge : `mistral-small`) :
+
+| Métrique | Score | Ce qu'elle mesure |
+| -------- | ----- | ----------------- |
+| Faithfulness | 0.830 | La réponse est-elle appuyée par les sources ? |
+| Answer relevancy | 0.830 | La réponse répond-elle à la question ? |
+| Context precision | 0.820 | Les passages retrouvés sont-ils pertinents ? |
+
+Une question hors périmètre (« Y a-t-il des concerts à Paris ? ») est correctement refusée, sans
+inventer d'événement. Ragas lui donne pourtant 0 en fidélité, car la métrique pénalise les refus :
+c'est une limite connue de Ragas, pas du système.
 
 ## Stack technique
 
-- **Python 3.13**
-- **LangChain** (`langchain`, `langchain-community`, `langchain-mistralai`, `langchain-text-splitters`)
-- **FAISS** (`faiss-cpu`) pour la base vectorielle
-- **Mistral AI** : `mistral-embed` (embeddings, 1024d) et `mistral-small-latest` (génération)
-- **FastAPI** + Uvicorn pour l'exposition REST
-- **Ragas** pour l'évaluation automatique de la qualité RAG
-- **Docker** + Docker Compose pour la conteneurisation
-- **UV** pour la gestion des dépendances
+Python 3.13, LangChain, FAISS, Mistral AI (`mistral-embed`, `mistral-small-latest`), FastAPI,
+Uvicorn, Pydantic, Ragas, Pytest, Docker, uv.
 
-## Structure du projet
+## Démarrage rapide (Docker)
 
-```
-puls-events-rag/
-├── src/
-│   ├── data/             # Collecte et nettoyage des données OpenAgenda
-│   ├── vectorstore/      # Documents LangChain, chunking, index FAISS
-│   ├── rag/              # Chaîne RAG (retriever, prompt, generator, chain)
-│   └── api/              # Application FastAPI
-├── scripts/              # Scripts d'orchestration (fetch, build, evaluate)
-├── tests/                # Tests unitaires (pytest)
-├── data/
-│   ├── events.jsonl      # Données nettoyées (gitignored, reconstructible)
-│   ├── index/            # Index FAISS persisté (gitignored, reconstructible)
-│   └── eval/             # Jeu d'évaluation annoté + résultats Ragas
-├── docs/                 # Rapport technique, slides
-├── Dockerfile
-├── docker-compose.yml
-└── pyproject.toml
-```
+Prérequis : Docker et une clé API Mistral (gratuite sur [console.mistral.ai](https://console.mistral.ai)).
 
-## Documentation
-
-Le rapport technique complet (architecture, choix techniques, résultats, limites et
-perspectives) est disponible ici :
-[docs/Rapport technique Puls Events.pdf](docs/Rapport%20technique%20Puls%20Events.pdf).
-
-## Prérequis
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/Mac) ou Docker Engine (Linux), pour le lancement via conteneur
-- Une clé API Mistral gratuite sur [console.mistral.ai](https://console.mistral.ai)
-
-Pour un développement local sans Docker, il faut en plus :
-
-- Python 3.13+
-- [UV](https://docs.astral.sh/uv/)
-
-## Configuration
-
-Crée un fichier `.env` à la racine :
+Créez un fichier `.env` à la racine :
 
 ```bash
-MISTRAL_API_KEY=ta_cle_mistral
+MISTRAL_API_KEY=votre_cle_mistral
 MISTRAL_CHAT_MODEL=mistral-small-latest
 MISTRAL_EMBED_MODEL=mistral-embed
-ADMIN_API_KEY=testcleapi
+ADMIN_API_KEY=une_cle_admin_de_votre_choix
 ```
 
-## Lancement via Docker (recommandé)
+Puis :
 
 ```bash
-# Construit l'image
-docker compose build
-
-# Lance l'API en arrière-plan
-docker compose up -d
-
-# Voir les logs
-docker compose logs -f
+docker compose up -d --build
 ```
 
-L'API est accessible sur `http://localhost:8000`.
-Documentation interactive Swagger : `http://localhost:8000/docs`.
+L'API est disponible sur `http://localhost:8000`, avec sa documentation interactive sur `http://localhost:8000/docs`.
 
-### Premier lancement : initialiser l'index
-
-Au tout premier démarrage, l'index FAISS n'existe pas. Il faut le construire
-via l'endpoint protégé `/rebuild` (qui télécharge les données OpenAgenda et
-calcule les embeddings) :
+Au premier lancement, construisez l'index (téléchargement des données et calcul des embeddings, quelques minutes) :
 
 ```bash
-curl -X POST http://localhost:8000/rebuild -H "X-API-Key: testcleapi"
+curl -X POST http://localhost:8000/rebuild -H "X-API-Key: une_cle_admin_de_votre_choix"
 ```
 
-Ou via Swagger : `POST /rebuild`, bouton "Try it out", renseigner le header
-`x-api-key`, exécuter. Comptez quelques minutes (fetch + indexation de ~7000 événements).
-
-> Sous Windows (PowerShell), `curl` se comporte différemment : le plus simple
-> est de passer par Swagger (`/docs`) pour appeler `/rebuild` et `/ask`.
-
-### Utilisation
+Posez ensuite une question :
 
 ```bash
 curl -X POST http://localhost:8000/ask \
   -H "Content-Type: application/json" \
-  -d '{"question": "Quels concerts de jazz a Bordeaux ?"}'
+  -d '{"question": "Quels concerts de jazz à Bordeaux ?"}'
 ```
 
-### Arrêt
+> Sous Windows (PowerShell), le plus simple est d'appeler `/rebuild` et `/ask` depuis la page Swagger (`/docs`).
+
+## Lancement en local, sans Docker
+
+Prérequis supplémentaires : Python 3.13+ et [uv](https://docs.astral.sh/uv/).
 
 ```bash
-docker compose down
-```
-
-## Lancement en local sans Docker
-
-```bash
-# Installer les dépendances
 uv sync
-
-# Récupérer les données OpenAgenda
-uv run python scripts/fetch_data.py
-
-# Construire l'index FAISS
-uv run python scripts/build_index.py
-
-# Lancer l'API
-uv run uvicorn src.api.app:app --reload
+uv run python scripts/fetch_data.py     # récupère les événements
+uv run python scripts/build_index.py    # construit l'index FAISS
+uv run uvicorn src.api.app:app --reload # lance l'API
 ```
 
-## Endpoints API
+## Endpoints
 
-| Méthode | Route      | Description                                                           |
-| ------- | ---------- | --------------------------------------------------------------------- |
-| `GET`   | `/health`  | Vérifie que l'API répond                                              |
-| `POST`  | `/ask`     | Pose une question, reçoit une réponse + sources                       |
-| `POST`  | `/rebuild` | Rafraîchit les données et reconstruit l'index (protégé par X-API-Key) |
-| `GET`   | `/docs`    | Documentation Swagger interactive                                     |
+| Méthode | Route | Description |
+| ------- | ----- | ----------- |
+| `GET` | `/health` | Vérifie que l'API répond |
+| `POST` | `/ask` | Pose une question, renvoie la réponse et ses sources |
+| `POST` | `/rebuild` | Rafraîchit les données et reconstruit l'index (protégé par `X-API-Key`) |
+| `GET` | `/docs` | Documentation Swagger interactive |
 
-## Tests
+Codes d'erreur : `422` question vide, `503` index non construit, `401` clé admin invalide, `500` erreur de génération.
+
+## Tests et évaluation
 
 ```bash
-uv run pytest
+uv run pytest                            # tests unitaires et tests de l'API
+uv run python scripts/evaluate_rag.py   # évaluation Ragas sur data/eval/questions.jsonl
 ```
 
-## Évaluation automatique (Ragas)
+## Structure du projet
 
-Le jeu d'évaluation annoté (10 questions/réponses de référence) est dans
-`data/eval/questions.jsonl`. Pour lancer l'évaluation :
-
-```bash
-uv run python scripts/evaluate_rag.py
+```
+├── src/
+│   ├── data/          # collecte et nettoyage des données OpenAgenda
+│   ├── vectorstore/   # documents LangChain, découpage, index FAISS
+│   ├── rag/           # chaîne RAG : recherche, prompt, génération
+│   └── api/           # application FastAPI
+├── scripts/           # récupération des données, indexation, évaluation
+├── tests/             # tests Pytest
+├── data/eval/         # jeu d'évaluation annoté
+├── docs/              # rapport technique détaillé
+├── Dockerfile
+└── docker-compose.yml
 ```
 
-Trois métriques sont calculées (LLM-juge : `mistral-small`) :
+## Pistes d'amélioration
 
-- **Faithfulness** : la réponse est-elle supportée par le contexte ?
-- **Answer relevancy** : la réponse répond-elle à la question ?
-- **Context precision** : les documents retrouvés sont-ils pertinents ?
-
-Résultats obtenus (sur les 10 questions annotées) :
-
-| Métrique          | Score |
-| ----------------- | ----- |
-| Faithfulness      | 0.830 |
-| Answer relevancy  | 0.830 |
-| Context precision | 0.820 |
-
-Évaluation sur 10 000 événements récupérés, dédupliqués à ~7 000 (index de ~10 500 chunks).
-Le détail par question est sauvegardé dans `data/eval/results.json`.
+Historique de conversation, filtrage des événements passés, extension à d'autres régions,
+index managé et cache pour une mise en production à grande échelle.

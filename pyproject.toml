@@ -1,7 +1,7 @@
 [project]
 name = "puls-events-rag"
 version = "0.1.0"
-description = "Add your description here"
+description = "Assistant IA (RAG) qui répond à partir de données réelles, avec sources : LangChain, Mistral AI, FAISS, FastAPI"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
